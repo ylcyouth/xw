@@ -1,0 +1,34 @@
+package com.gagaco.xunxuproj2.web.dto;
+
+/**
+ * Created by 瓦力.
+ */
+public class SubwayDto {
+    private Long id;
+    private String name;
+    private String cityEnName;
+
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public String getCityEnName() {
+        return cityEnName;
+    }
+
+    public void setCityEnName(String cityEnName) {
+        this.cityEnName = cityEnName;
+    }
+}
