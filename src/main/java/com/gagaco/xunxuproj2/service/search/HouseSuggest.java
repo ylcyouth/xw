@@ -1,10 +1,12 @@
 package com.gagaco.xunxuproj2.service.search;
 
 /**
- * Created by 瓦力.
+ *
  */
 public class HouseSuggest {
+
     private String input;
+
     private int weight = 10; // 默认权重
 
     public String getInput() {

@@ -6,6 +6,7 @@ import com.gagaco.xunxuproj2.entity.SupportAddress;
 import com.gagaco.xunxuproj2.service.ServiceMultiResult;
 import com.gagaco.xunxuproj2.service.ServiceResult;
 import com.gagaco.xunxuproj2.service.house.IHouseService;
+import com.gagaco.xunxuproj2.service.search.ISearchService;
 import com.gagaco.xunxuproj2.service.supportaddress.ISupportAddressService;
 import com.gagaco.xunxuproj2.service.user.IUserService;
 import com.gagaco.xunxuproj2.web.dto.*;
@@ -35,6 +36,23 @@ public class HouseController {
 
     @Autowired
     private IUserService userService;
+
+    @Autowired
+    private ISearchService searchService;
+
+    /**
+     * search as you type
+     * 自动补全接口
+     */
+    @GetMapping("rent/house/autocomplete")
+    @ResponseBody
+    public ApiResponse autoComplete(String prefix) {
+        if (prefix.isEmpty()) {
+            return ApiResponse.ofStatus(ApiResponse.Status.BAD_REQUEST);
+        }
+        ServiceResult<List<String>> result = searchService.suggest(prefix);
+        return ApiResponse.ofSuccess(result.getResult());
+    }
 
 
     /**

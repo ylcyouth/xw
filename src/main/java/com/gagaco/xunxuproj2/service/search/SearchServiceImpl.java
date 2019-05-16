@@ -11,8 +11,13 @@ import com.gagaco.xunxuproj2.repository.HouseDetailRepository;
 import com.gagaco.xunxuproj2.repository.HouseRepository;
 import com.gagaco.xunxuproj2.repository.HouseTagRepository;
 import com.gagaco.xunxuproj2.service.ServiceMultiResult;
+import com.gagaco.xunxuproj2.service.ServiceResult;
 import com.gagaco.xunxuproj2.web.form.RentSearch;
+import com.google.common.collect.Lists;
 import com.google.common.primitives.Longs;
+import org.elasticsearch.action.admin.indices.analyze.AnalyzeAction;
+import org.elasticsearch.action.admin.indices.analyze.AnalyzeRequestBuilder;
+import org.elasticsearch.action.admin.indices.analyze.AnalyzeResponse;
 import org.elasticsearch.action.index.IndexRequestBuilder;
 import org.elasticsearch.action.index.IndexResponse;
 import org.elasticsearch.action.search.SearchRequestBuilder;
@@ -28,6 +33,11 @@ import org.elasticsearch.index.reindex.DeleteByQueryRequestBuilder;
 import org.elasticsearch.rest.RestStatus;
 import org.elasticsearch.search.SearchHits;
 import org.elasticsearch.search.sort.SortOrder;
+import org.elasticsearch.search.suggest.Suggest;
+import org.elasticsearch.search.suggest.SuggestBuilder;
+import org.elasticsearch.search.suggest.SuggestBuilders;
+import org.elasticsearch.search.suggest.completion.CompletionSuggestion;
+import org.elasticsearch.search.suggest.completion.CompletionSuggestionBuilder;
 import org.modelmapper.ModelMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -38,7 +48,9 @@ import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * @date 2019-5-2 00:12:17
@@ -270,8 +282,14 @@ public class SearchServiceImpl implements ISearchService {
     }*/
 
     private boolean create(HouseIndexTemplate template) {
-        IndexRequestBuilder indexRequestBuilder = client.prepareIndex(INDEX_NAME, INDEX_TYPE);
+
+        //存houseIndexTemplate之前，先更新和索引绑定的suggest
+        if (!updateSuggest(template)) {
+            return false;
+        }
+
         try {
+            IndexRequestBuilder indexRequestBuilder = client.prepareIndex(INDEX_NAME, INDEX_TYPE);
             indexRequestBuilder.setSource(objectMapper.writeValueAsBytes(template), XContentType.JSON);
             IndexResponse indexResponse = indexRequestBuilder.get();
             logger.debug("Create index with house: " + template.getHouseId());
@@ -287,8 +305,14 @@ public class SearchServiceImpl implements ISearchService {
     }
 
     private boolean update(String id, HouseIndexTemplate template) {
-        UpdateRequestBuilder updateRequestBuilder = client.prepareUpdate(INDEX_NAME, INDEX_TYPE, id);
+
+        //修改es中houseTemplate文档之前先修改要存入houseIndexTemplate中的suggest
+        if (!updateSuggest(template)) {
+            return false;
+        }
+
         try {
+            UpdateRequestBuilder updateRequestBuilder = client.prepareUpdate(INDEX_NAME, INDEX_TYPE, id);
             updateRequestBuilder.setDoc(objectMapper.writeValueAsBytes(template), XContentType.JSON);
             UpdateResponse updateResponse = updateRequestBuilder.get();
             logger.debug("Update index with house: " + template.getHouseId());
@@ -433,6 +457,124 @@ public class SearchServiceImpl implements ISearchService {
 
         //封装服务返回对象，返回
         return new ServiceMultiResult<>(searchResponse.getHits().totalHits, houseIds);
+    }
+
+    /**
+     * 搜索补全的关键词
+     *
+     * @param prefix
+     * @return
+     */
+    @Override
+    public ServiceResult<List<String>> suggest(String prefix) {
+
+        CompletionSuggestionBuilder suggestion = SuggestBuilders.completionSuggestion("suggest");
+
+        SuggestBuilder suggestBuilder = new SuggestBuilder();
+        suggestBuilder.addSuggestion("autocomplete", suggestion);
+
+        SearchRequestBuilder searchRequestBuilder = client.prepareSearch(INDEX_NAME);
+        searchRequestBuilder.setTypes(INDEX_TYPE);
+        searchRequestBuilder.suggest(suggestBuilder);
+
+        logger.debug(searchRequestBuilder.toString());
+
+        SearchResponse searchResponse = searchRequestBuilder.get();
+
+        Suggest suggest = searchResponse.getSuggest();
+
+        if (suggest == null) {
+            return ServiceResult.of(new ArrayList<>());
+        }
+
+        /*Suggest.Suggestion<? extends Suggest.Suggestion.Entry<? extends Suggest.Suggestion.Entry.Option>>
+                autocomplete = suggest.getSuggestion("autocomplete");*/
+        Suggest.Suggestion result = suggest.getSuggestion("autocomplete");
+
+        //表示候选词的数量
+        int maxSuggest = 0;
+
+        Set<String> suggestSet = new HashSet<>();
+
+        for (Object term : result.getEntries()) {
+            if (term instanceof CompletionSuggestion.Entry) {
+                CompletionSuggestion.Entry item = (CompletionSuggestion.Entry) term;
+
+                //去空
+                if (item.getOptions().isEmpty()) {
+                    continue;
+                }
+
+                for (CompletionSuggestion.Entry.Option option : item.getOptions()) {
+                    String tip = option.getText().string();
+
+                    //去重
+                    if (suggestSet.contains(tip)) {
+                        continue;
+                    }
+
+                    suggestSet.add(tip);
+                    maxSuggest++;
+                }
+            }
+
+            //只拿出来5个候选词
+            if (maxSuggest > 5) {
+                break;
+            }
+        }
+
+        List<String> suggests = Lists.newArrayList(suggestSet.toArray(new String[]{}));
+        return ServiceResult.of(suggests);
+    }
+
+    private boolean updateSuggest(HouseIndexTemplate indexTemplate) {
+
+        AnalyzeRequestBuilder analyzeRequestBuilder = new AnalyzeRequestBuilder(
+                client,
+                AnalyzeAction.INSTANCE,
+                INDEX_NAME,
+                indexTemplate.getTitle(),
+                indexTemplate.getLayoutDesc(),
+                indexTemplate.getRoundService(),
+                indexTemplate.getDescription(),
+                indexTemplate.getSubwayLineName(),
+                indexTemplate.getSubwayStationName()
+        );
+
+        analyzeRequestBuilder.setAnalyzer("ik_smart");
+
+        AnalyzeResponse analyzeResponse = analyzeRequestBuilder.get();
+
+        List<AnalyzeResponse.AnalyzeToken> tokens = analyzeResponse.getTokens();
+
+        if (tokens == null) {
+            logger.warn("Can not analyze token for house: " + indexTemplate.getHouseId());
+            return false;
+        }
+
+        List<HouseSuggest> suggestList = new ArrayList<>();
+
+        for (AnalyzeResponse.AnalyzeToken analyzeToken : tokens) {
+
+            //去除数字和小于2个字的分词结果
+            if ("<NUM>".equals(analyzeToken.getType()) || analyzeToken.getTerm().length() < 2) {
+                continue;
+            }
+
+            HouseSuggest houseSuggest = new HouseSuggest();
+            houseSuggest.setInput(analyzeToken.getTerm());
+            suggestList.add(houseSuggest);
+        }
+
+        //定制化小区自动补全
+        HouseSuggest houseSuggest = new HouseSuggest();
+        houseSuggest.setInput(indexTemplate.getDistrict());
+        suggestList.add(houseSuggest);
+
+        indexTemplate.setSuggest(suggestList);
+        return true;
+
     }
 
 

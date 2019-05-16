@@ -1,7 +1,10 @@
 package com.gagaco.xunxuproj2.service.search;
 
 import com.gagaco.xunxuproj2.service.ServiceMultiResult;
+import com.gagaco.xunxuproj2.service.ServiceResult;
 import com.gagaco.xunxuproj2.web.form.RentSearch;
+
+import java.util.List;
 
 /**
  * 搜索服务接口
@@ -23,7 +26,12 @@ public interface ISearchService {
     ServiceMultiResult<Long> query(RentSearch rentSearch);
 
 
-
+    /**
+     * 搜索补全的关键词
+     * @param prefix
+     * @return
+     */
+    ServiceResult<List<String>> suggest(String prefix);
 
 
 }
