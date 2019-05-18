@@ -393,22 +393,11 @@ public class SearchServiceImpl implements ISearchService {
         //query
         //城市一定有
         boolQueryBuilder.filter(QueryBuilders.termQuery(HouseIndexKey.CITY_EN_NAME, rentSearch.getCityEnName()));
+
         //区可能有也可能没有
         if (rentSearch.getRegionEnName() != null && !"*".equals(rentSearch.getRegionEnName())) {
             boolQueryBuilder.filter(QueryBuilders.termQuery(HouseIndexKey.REGION_EN_NAME, rentSearch.getRegionEnName()));
         }
-
-        //关键词搜索
-        MultiMatchQueryBuilder multiMatchQueryBuilder = QueryBuilders.multiMatchQuery(
-                rentSearch.getKeywords(),
-                HouseIndexKey.TITLE,
-                HouseIndexKey.TRAFFIC,
-                HouseIndexKey.DISTRICT,
-                HouseIndexKey.ROUND_SERVICE,
-                HouseIndexKey.SUBWAY_LINE_NAME,
-                HouseIndexKey.SUBWAY_STATION_NAME
-                );
-        boolQueryBuilder.must(multiMatchQueryBuilder);
 
         //面积
         RentValueBlock areaBlock = RentValueBlock.matchArea(rentSearch.getAreaBlock());
@@ -448,6 +437,24 @@ public class SearchServiceImpl implements ISearchService {
             boolQueryBuilder.filter(termQueryBuilder);
         }
 
+        boolQueryBuilder.should(
+                QueryBuilders.matchQuery(HouseIndexKey.TITLE, rentSearch.getKeywords())
+                        .boost(2.0F)
+        );
+
+        boolQueryBuilder.should(
+                QueryBuilders.multiMatchQuery(
+                        rentSearch.getKeywords(),
+                        HouseIndexKey.TRAFFIC,
+                        HouseIndexKey.DISTRICT,
+                        HouseIndexKey.ROUND_SERVICE,
+                        HouseIndexKey.SUBWAY_LINE_NAME,
+                        HouseIndexKey.SUBWAY_STATION_NAME
+                )
+        );
+
+
+
         //request
         SearchRequestBuilder searchRequestBuilder = client.prepareSearch(INDEX_NAME);
         searchRequestBuilder.setTypes(INDEX_TYPE);
@@ -456,6 +463,8 @@ public class SearchServiceImpl implements ISearchService {
                 HouseSort.getSortKey(rentSearch.getOrderBy()), SortOrder.fromString(rentSearch.getOrderDirection()));
         searchRequestBuilder.setFrom(rentSearch.getStart());
         searchRequestBuilder.setSize(rentSearch.getSize());
+
+        searchRequestBuilder.setFetchSource(new String[]{HouseIndexKey.HOUSE_ID, HouseIndexKey.TITLE}, null);
 
 
         logger.debug(searchRequestBuilder.toString());
