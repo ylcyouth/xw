@@ -2,6 +2,7 @@ package com.gagaco.xunxuproj2.config;
 
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.BeansException;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
@@ -43,6 +44,12 @@ public class WebMvcConfig extends WebMvcConfigurerAdapter implements Application
 
     private ApplicationContext applicationContext;
 
+    /**
+     * 默认是true, 通过@Value注解把它设置成false
+     */
+    @Value("${spring.thymeleaf.cache}")
+    private boolean thymeleafCacheEnable = true;
+
     @Override
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
         this.applicationContext = applicationContext;
@@ -59,6 +66,7 @@ public class WebMvcConfig extends WebMvcConfigurerAdapter implements Application
         SpringResourceTemplateResolver templateResolver = new SpringResourceTemplateResolver();
         templateResolver.setApplicationContext(this.applicationContext);
         templateResolver.setCharacterEncoding("UTF-8");
+        templateResolver.setCacheable(thymeleafCacheEnable);
         return templateResolver;
     }
 
