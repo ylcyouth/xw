@@ -2,7 +2,6 @@ package com.gagaco.xunxuproj2.service.search;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.gagaco.xunxuproj2.base.HouseSort;
 import com.gagaco.xunxuproj2.base.RentValueBlock;
 import com.gagaco.xunxuproj2.entity.House;
 import com.gagaco.xunxuproj2.entity.HouseDetail;
@@ -37,7 +36,6 @@ import org.elasticsearch.search.SearchHits;
 import org.elasticsearch.search.aggregations.AggregationBuilders;
 import org.elasticsearch.search.aggregations.bucket.terms.Terms;
 import org.elasticsearch.search.aggregations.bucket.terms.TermsAggregationBuilder;
-import org.elasticsearch.search.sort.SortOrder;
 import org.elasticsearch.search.suggest.Suggest;
 import org.elasticsearch.search.suggest.SuggestBuilder;
 import org.elasticsearch.search.suggest.SuggestBuilders;
@@ -459,14 +457,12 @@ public class SearchServiceImpl implements ISearchService {
                 )
         );
 
-
-
         //request
         SearchRequestBuilder searchRequestBuilder = client.prepareSearch(INDEX_NAME);
         searchRequestBuilder.setTypes(INDEX_TYPE);
         searchRequestBuilder.setQuery(boolQueryBuilder);
-        searchRequestBuilder.addSort(
-                HouseSort.getSortKey(rentSearch.getOrderBy()), SortOrder.fromString(rentSearch.getOrderDirection()));
+        //searchRequestBuilder.addSort(
+        //        HouseSort.getSortKey(rentSearch.getOrderBy()), SortOrder.fromString(rentSearch.getOrderDirection()));
         searchRequestBuilder.setFrom(rentSearch.getStart());
         searchRequestBuilder.setSize(rentSearch.getSize());
 
@@ -606,6 +602,45 @@ public class SearchServiceImpl implements ISearchService {
         return ServiceResult.of(0L);
     }
 
+    /**
+     * 聚合城市房源数据
+     *
+     * @param cityName
+     */
+    @Override
+    public ServiceMultiResult<HouseBucketDto> aggregateMap(String cityName) {
+
+        BoolQueryBuilder boolQuery = QueryBuilders.boolQuery();
+
+        boolQuery.filter(QueryBuilders.termQuery(HouseIndexKey.CITY_EN_NAME, cityName));
+
+        TermsAggregationBuilder agg = AggregationBuilders.terms(HouseIndexKey.AGG_REGION)
+                .field(HouseIndexKey.REGION_EN_NAME);
+
+        SearchRequestBuilder request = client.prepareSearch(INDEX_NAME)
+                .setTypes(INDEX_TYPE)
+                .setQuery(boolQuery)
+                .addAggregation(agg);
+
+        SearchResponse response = request.get();
+
+        logger.debug(request.toString());
+
+        List<HouseBucketDto> bucketDtos = new ArrayList<>();
+
+        if (response.status() != RestStatus.OK) {
+            logger.warn("Aggregation status is not ok for " +  request);
+            return new ServiceMultiResult<>(0, bucketDtos);
+        }
+
+        Terms term = response.getAggregations().get(HouseIndexKey.AGG_REGION);
+        for (Terms.Bucket bucket : term.getBuckets()) {
+            bucketDtos.add(new HouseBucketDto(bucket.getKeyAsString(), bucket.getDocCount()));
+        }
+
+        return new ServiceMultiResult<>(response.getHits().totalHits(), bucketDtos);
+    }
+
     private boolean updateSuggest(HouseIndexTemplate indexTemplate) {
 
         AnalyzeRequestBuilder analyzeRequestBuilder = new AnalyzeRequestBuilder(
@@ -613,7 +648,7 @@ public class SearchServiceImpl implements ISearchService {
                 AnalyzeAction.INSTANCE,
                 INDEX_NAME,
                 indexTemplate.getTitle(),
-                indexTemplate.getLayoutDesc(),
+                //indexTemplate.getLayoutDesc(),
                 indexTemplate.getRoundService(),
                 indexTemplate.getDescription(),
                 indexTemplate.getSubwayLineName(),

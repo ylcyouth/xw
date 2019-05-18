@@ -6,6 +6,7 @@ import com.gagaco.xunxuproj2.entity.SupportAddress;
 import com.gagaco.xunxuproj2.service.ServiceMultiResult;
 import com.gagaco.xunxuproj2.service.ServiceResult;
 import com.gagaco.xunxuproj2.service.house.IHouseService;
+import com.gagaco.xunxuproj2.service.search.HouseBucketDto;
 import com.gagaco.xunxuproj2.service.search.ISearchService;
 import com.gagaco.xunxuproj2.service.supportaddress.ISupportAddressService;
 import com.gagaco.xunxuproj2.service.user.IUserService;
@@ -253,7 +254,10 @@ public class HouseController {
         ServiceMultiResult<SupportAddressDto> regions =
                 supportAddressService.findAllRegionsByCityName(cityEnName);
 
-        model.addAttribute("total", 0);
+        ServiceMultiResult<HouseBucketDto> result = searchService.aggregateMap(cityEnName);
+
+        model.addAttribute("aggData", result.getResult());
+        model.addAttribute("total", result.getTotal());
         model.addAttribute("regions", regions.getResult());
         return "rent-map2";
     }
