@@ -34,4 +34,19 @@ public interface ISearchService {
     ServiceResult<List<String>> suggest(String prefix);
 
 
+    /**
+     * 聚合小区的房源数量
+     */
+    ServiceResult<Long> aggregateDictrictHouse(String cityName, String regionEnName, String district);
+
+
+
+
+
+
+
+
+
+
+
 }

@@ -173,10 +173,6 @@ public class HouseController {
 //        model.addAttribute("houses", new ArrayList<>());
 //        model.addAttribute("total", 0);
 
-
-
-
-
         //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
         //判断rentSearch中的regionName
@@ -220,8 +216,10 @@ public class HouseController {
                 supportAddressService.findCityAndRegion(houseDto.getCityEnName(), houseDto.getRegionEnName());
 
         //把查询到的city和region放到model中
-        model.addAttribute("city", cityAndRegionMap.get(SupportAddress.Level.CITY));
-        model.addAttribute("region", cityAndRegionMap.get(SupportAddress.Level.REGION));
+        SupportAddressDto city = cityAndRegionMap.get(SupportAddress.Level.CITY);
+        SupportAddressDto region = cityAndRegionMap.get(SupportAddress.Level.REGION);
+        model.addAttribute("city", city);
+        model.addAttribute("region", region);
 
 
         ServiceResult<UserDto> userDtoSr = userService.findById(houseDto.getAdminId());
@@ -229,6 +227,10 @@ public class HouseController {
         model.addAttribute("house", houseDto);
 
         // es 聚合，该小区共有多少套房源
+        ServiceResult<Long> aggSr =
+                searchService.aggregateDictrictHouse(city.getEnName(), region.getEnName(), houseDto.getDistrict());
+        model.addAttribute("houseCountInDistrict", aggSr.getResult());
+
 
         return "house-detail";
 

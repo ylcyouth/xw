@@ -25,13 +25,18 @@ import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.action.update.UpdateRequestBuilder;
 import org.elasticsearch.action.update.UpdateResponse;
 import org.elasticsearch.client.transport.TransportClient;
-import org.elasticsearch.common.xcontent.XContentType;
-import org.elasticsearch.index.query.*;
+import org.elasticsearch.index.query.BoolQueryBuilder;
+import org.elasticsearch.index.query.QueryBuilders;
+import org.elasticsearch.index.query.RangeQueryBuilder;
+import org.elasticsearch.index.query.TermQueryBuilder;
 import org.elasticsearch.index.reindex.BulkIndexByScrollResponse;
 import org.elasticsearch.index.reindex.DeleteByQueryAction;
 import org.elasticsearch.index.reindex.DeleteByQueryRequestBuilder;
 import org.elasticsearch.rest.RestStatus;
 import org.elasticsearch.search.SearchHits;
+import org.elasticsearch.search.aggregations.AggregationBuilders;
+import org.elasticsearch.search.aggregations.bucket.terms.Terms;
+import org.elasticsearch.search.aggregations.bucket.terms.TermsAggregationBuilder;
 import org.elasticsearch.search.sort.SortOrder;
 import org.elasticsearch.search.suggest.Suggest;
 import org.elasticsearch.search.suggest.SuggestBuilder;
@@ -322,7 +327,8 @@ public class SearchServiceImpl implements ISearchService {
 
         try {
             UpdateRequestBuilder updateRequestBuilder = client.prepareUpdate(INDEX_NAME, INDEX_TYPE, id);
-            updateRequestBuilder.setDoc(objectMapper.writeValueAsBytes(template), XContentType.JSON);
+            //updateRequestBuilder.setDoc(objectMapper.writeValueAsBytes(template), XContentType.JSON);
+            updateRequestBuilder.setDoc(objectMapper.writeValueAsBytes(template));
             UpdateResponse updateResponse = updateRequestBuilder.get();
             logger.debug("Update index with house: " + template.getHouseId());
             if (updateResponse.status() == RestStatus.OK) {
@@ -557,6 +563,47 @@ public class SearchServiceImpl implements ISearchService {
 
         List<String> suggests = Lists.newArrayList(suggestSet.toArray(new String[]{}));
         return ServiceResult.of(suggests);
+    }
+
+    /**
+     * 聚合小区的房源数量
+     *
+     * @param cityName
+     * @param regionEnName
+     * @param district
+     */
+    @Override
+    public ServiceResult<Long> aggregateDictrictHouse(String cityName, String regionEnName, String district) {
+
+        BoolQueryBuilder boolQueryBuilder = QueryBuilders.boolQuery()
+                .filter(QueryBuilders.termQuery(HouseIndexKey.CITY_EN_NAME, cityName))
+                .filter(QueryBuilders.termQuery(HouseIndexKey.REGION_EN_NAME, regionEnName))
+                .filter(QueryBuilders.termQuery(HouseIndexKey.DISTRICT, district));
+
+        TermsAggregationBuilder aggBuilder = AggregationBuilders.terms(HouseIndexKey.AGG_DISTRICT).
+                        field(HouseIndexKey.DISTRICT);
+
+        SearchRequestBuilder requestBuilder = client.prepareSearch(INDEX_NAME)
+                .setTypes(INDEX_TYPE)
+                .setQuery(boolQueryBuilder)
+                .addAggregation(aggBuilder)
+                .setSize(0);
+
+        logger.debug(requestBuilder.toString());
+
+        SearchResponse searchResponse = requestBuilder.get();
+
+        if (searchResponse.status() == RestStatus.OK) {
+            //Aggregation aggregation = searchResponse.getAggregations().get(HouseIndexKey.AGG_DISTRICT);
+            //注意用Terms来接收 terms extends MultiBucketsAggregation extends Aggregation
+            Terms terms = searchResponse.getAggregations().get(HouseIndexKey.AGG_DISTRICT);
+            if (terms.getBuckets() != null && !terms.getBuckets().isEmpty()) {
+                return ServiceResult.of(terms.getBucketByKey(district).getDocCount());
+            } else {
+                logger.warn("Failed to Aggregate for " + HouseIndexKey.AGG_DISTRICT);
+            }
+        }
+        return ServiceResult.of(0L);
     }
 
     private boolean updateSuggest(HouseIndexTemplate indexTemplate) {
