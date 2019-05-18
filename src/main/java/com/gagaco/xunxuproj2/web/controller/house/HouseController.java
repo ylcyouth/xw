@@ -236,6 +236,28 @@ public class HouseController {
 
     }
 
+    @GetMapping("rent/house/map")
+    public String rentMap(@RequestParam("cityEnName")String cityEnName,
+                          Model model,
+                          HttpSession httpSession,
+                          RedirectAttributes redirectAttributes) {
+        ServiceResult<SupportAddressDto> city = supportAddressService.findCity(cityEnName);
+        if (!city.isSuccess()) {
+            redirectAttributes.addAttribute("msg", "must_chose_city");
+            return "redirect:/index";
+        } else {
+            httpSession.setAttribute("cityName", cityEnName);
+            model.addAttribute("city", city.getResult());
+        }
+
+        ServiceMultiResult<SupportAddressDto> regions =
+                supportAddressService.findAllRegionsByCityName(cityEnName);
+
+        model.addAttribute("total", 0);
+        model.addAttribute("regions", regions.getResult());
+        return "rent-map2";
+    }
+
 
 
 
