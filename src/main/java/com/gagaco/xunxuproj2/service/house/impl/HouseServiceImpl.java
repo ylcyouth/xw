@@ -19,9 +19,7 @@ import com.gagaco.xunxuproj2.web.form.RentSearch;
 import com.google.common.collect.Maps;
 import com.qiniu.common.QiniuException;
 import com.qiniu.http.Response;
-import com.sun.scenario.effect.impl.prism.ps.PPSBlend_ADDPeer;
 import org.modelmapper.ModelMapper;
-import org.springframework.beans.PropertyValue;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
@@ -29,7 +27,6 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
-import org.springframework.security.access.method.P;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -535,11 +532,12 @@ public class HouseServiceImpl implements IHouseService {
 
         Specification<House> specification = (root, criteriaQuery, criteriaBuilder) -> {
 
-            //这里还好加上处理 价格区间 还有 面积区间的 代码，现在前台房源信息浏览页面是无法无法根据这个条件搜索的
+            //这里还要加上处理 价格区间 还有 面积区间的 代码，现在前台房源信息浏览页面是无法无法根据这个条件搜索的
 
             Predicate predicate = criteriaBuilder.equal(root.get("status"), HouseStatus.PASSES.getValue());
             predicate = criteriaBuilder
                     .and(predicate, criteriaBuilder.equal(root.get("cityEnName"), rentSearch.getCityEnName()));
+
             //当根据距地铁站的距离排序时，处理没有地铁站的情况
             if (HouseSort.DISTANCE_TO_SUBWAY_KEY.equals(rentSearch.getOrderBy())) {
                 predicate = criteriaBuilder

@@ -489,6 +489,8 @@ public class SearchServiceImpl implements ISearchService {
     public ServiceResult<List<String>> suggest(String prefix) {
 
         CompletionSuggestionBuilder suggestion = SuggestBuilders.completionSuggestion("suggest");
+        suggestion.prefix(prefix);
+        suggestion.size(5);
 
         SuggestBuilder suggestBuilder = new SuggestBuilder();
         suggestBuilder.addSuggestion("autocomplete", suggestion);
