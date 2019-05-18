@@ -27,7 +27,7 @@ import org.elasticsearch.action.update.UpdateResponse;
 import org.elasticsearch.client.transport.TransportClient;
 import org.elasticsearch.common.xcontent.XContentType;
 import org.elasticsearch.index.query.*;
-import org.elasticsearch.index.reindex.BulkByScrollResponse;
+import org.elasticsearch.index.reindex.BulkIndexByScrollResponse;
 import org.elasticsearch.index.reindex.DeleteByQueryAction;
 import org.elasticsearch.index.reindex.DeleteByQueryRequestBuilder;
 import org.elasticsearch.rest.RestStatus;
@@ -223,13 +223,21 @@ public class SearchServiceImpl implements ISearchService {
 
         logger.debug("Debug by query for house: " + builder);
 
-        BulkByScrollResponse response = builder.get();
-        long deleted = response.getDeleted();
+        BulkIndexByScrollResponse bulkIndexByScrollResponse = builder.get();
+        long deleted = bulkIndexByScrollResponse.getDeleted();
         logger.debug("Delete total " + deleted);
-
         if (deleted <= 0) {
             this.remove(houseId, message.getRetry() + 1);
         }
+
+        //5.6的写法
+        //BulkByScrollResponse response = builder.get();
+        //long deleted = response.getDeleted();
+//        logger.debug("Delete total " + deleted);
+//
+//        if (deleted <= 0) {
+//            this.remove(houseId, message.getRetry() + 1);
+//        }
     }
 
 
@@ -290,7 +298,8 @@ public class SearchServiceImpl implements ISearchService {
 
         try {
             IndexRequestBuilder indexRequestBuilder = client.prepareIndex(INDEX_NAME, INDEX_TYPE);
-            indexRequestBuilder.setSource(objectMapper.writeValueAsBytes(template), XContentType.JSON);
+            //indexRequestBuilder.setSource(objectMapper.writeValueAsBytes(template), XContentType.JSON);
+            indexRequestBuilder.setSource(objectMapper.writeValueAsBytes(template));
             IndexResponse indexResponse = indexRequestBuilder.get();
             logger.debug("Create index with house: " + template.getHouseId());
             if (indexResponse.status() == RestStatus.CREATED) {
@@ -334,7 +343,7 @@ public class SearchServiceImpl implements ISearchService {
 
         logger.debug("Delete by query for house: " + builer);
 
-        BulkByScrollResponse response = builer.get();
+        BulkIndexByScrollResponse response = builer.get();
 
         long deleted = response.getDeleted();
         if (deleted != totalHit) {
@@ -343,6 +352,16 @@ public class SearchServiceImpl implements ISearchService {
         } else {
             return create(template);
         }
+
+        /*BulkByScrollResponse response = builer.get();
+
+        long deleted = response.getDeleted();
+        if (deleted != totalHit) {
+            logger.warn("Need delete {}, but {} was deleted!", totalHit, deleted);
+            return false;
+        } else {
+            return create(template);
+        }*/
 
 
 
@@ -456,7 +475,8 @@ public class SearchServiceImpl implements ISearchService {
         hits.forEach(hit -> houseIds.add(Longs.tryParse(String.valueOf(hit.getSource().get(HouseIndexKey.HOUSE_ID)))));
 
         //封装服务返回对象，返回
-        return new ServiceMultiResult<>(searchResponse.getHits().totalHits, houseIds);
+        //return new ServiceMultiResult<>(searchResponse.getHits().totalHits, houseIds);//5.6写法
+        return new ServiceMultiResult<>(searchResponse.getHits().totalHits(), houseIds);//5.2的写法
     }
 
     /**
@@ -543,6 +563,8 @@ public class SearchServiceImpl implements ISearchService {
         );
 
         analyzeRequestBuilder.setAnalyzer("ik_smart");
+
+        logger.debug(analyzeRequestBuilder.toString());
 
         AnalyzeResponse analyzeResponse = analyzeRequestBuilder.get();
 

@@ -15,7 +15,7 @@
     <description>Demo project for Spring Boot</description>
 
     <properties>
-        <elasticsearch.version>5.6.16</elasticsearch.version>
+        <elasticsearch.version>5.2.0</elasticsearch.version>
         <java.version>1.8</java.version>
         <!-- 指定自己的Thymeleaf版本，覆盖parent的版本，因为要用的是3.0.3.RELEASE版本的，但是parent中默认的不是这个版本  -->
         <thymeleaf.version>3.0.3.RELEASE</thymeleaf.version>
