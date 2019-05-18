@@ -90,7 +90,7 @@
 </div>
 <!--<div th:include="common :: footer"></div>-->
 <!--里面的ak参数是在百度地图开发者平台上创建应用之后应用对应的ak-->
-<script type="text/javascript" src="http://api.map.baidu.com/api?v=2.0&ak=s6GY6rSFc3Up4jmyBS81gROH56E0O8v3"></script>
+<script type="text/javascript" src="http://api.map.baidu.com/api?v=3.0&ak=s6GY6rSFc3Up4jmyBS81gROH56E0O8v3"></script>
 <script type="text/javascript" src="/static/js/baidu-map/TextIconOverlay.js"></script>
 <script type="text/javascript" src="/static/js/baidu-map/MarkerClusterer.js"></script>
 <script type="text/javascript" src="http://api.map.baidu.com/library/SearchInfoWindow/1.5/src/SearchInfoWindow_min.js"></script>
@@ -98,14 +98,13 @@
 <script type="text/javascript" src="/static/lib/layui/layui.js"></script>
 <!--关于百度地图的js全部卸载这个自己创建的rent-map2.js中-->
 <script type="text/javascript" src="/static/js/rent-map2.js"></script>
-<script type="text/javascript" th:line="javascript">
+<script type="text/javascript" th:inline="javascript">
     //初始化加载地图数据
-    /*var city = [[${city}]];
+    var city = [[${city}]];
     var regions = [[${regions}]];
     var aggData = [[${aggData}]];
-*/
-    //load(city, regions, aggData);
-    load("", "", "");
+    load(city, regions, aggData);
+    //load("", "", "");
 
 </script>
 
