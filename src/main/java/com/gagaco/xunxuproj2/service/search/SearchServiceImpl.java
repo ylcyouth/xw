@@ -2,6 +2,7 @@ package com.gagaco.xunxuproj2.service.search;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.gagaco.xunxuproj2.base.HouseSort;
 import com.gagaco.xunxuproj2.base.RentValueBlock;
 import com.gagaco.xunxuproj2.entity.House;
 import com.gagaco.xunxuproj2.entity.HouseDetail;
@@ -35,10 +36,12 @@ import org.elasticsearch.index.reindex.BulkIndexByScrollResponse;
 import org.elasticsearch.index.reindex.DeleteByQueryAction;
 import org.elasticsearch.index.reindex.DeleteByQueryRequestBuilder;
 import org.elasticsearch.rest.RestStatus;
+import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.SearchHits;
 import org.elasticsearch.search.aggregations.AggregationBuilders;
 import org.elasticsearch.search.aggregations.bucket.terms.Terms;
 import org.elasticsearch.search.aggregations.bucket.terms.TermsAggregationBuilder;
+import org.elasticsearch.search.sort.SortOrder;
 import org.elasticsearch.search.suggest.Suggest;
 import org.elasticsearch.search.suggest.SuggestBuilder;
 import org.elasticsearch.search.suggest.SuggestBuilders;
@@ -673,6 +676,42 @@ public class SearchServiceImpl implements ISearchService {
         }
 
         return new ServiceMultiResult<>(response.getHits().totalHits(), bucketDtos);
+    }
+
+    /**
+     * 城市级别查询
+     * 查询一个城市下面所有的房源id
+     * @param cityEnName
+     * @param orderBy
+     * @param orderDirection
+     * @param start
+     * @param size
+     */
+    @Override
+    public ServiceMultiResult<Long> mapQuery(String cityEnName, String orderBy, String orderDirection, int start, int size) {
+
+        BoolQueryBuilder boolQuery = QueryBuilders.boolQuery();
+        boolQuery.filter(QueryBuilders.termQuery(HouseIndexKey.CITY_EN_NAME, cityEnName));
+
+        SearchRequestBuilder searchRequest = client.prepareSearch(INDEX_NAME);
+        searchRequest.setTypes(INDEX_TYPE)
+                .setQuery(boolQuery)
+                .addSort(HouseSort.getSortKey(orderBy), SortOrder.fromString(orderDirection))
+                .setFrom(start)
+                .setSize(size);
+
+        List<Long> houseIds = new ArrayList<>();
+        SearchResponse searchResponse = searchRequest.get();
+        if (searchResponse.status() != RestStatus.OK) {
+            logger.warn("Search status is not ok for " + searchRequest);
+            return new ServiceMultiResult<>(0, houseIds);
+        }
+
+        for (SearchHit hit : searchResponse.getHits()) {
+            houseIds.add(Longs.tryParse(String.valueOf(hit.getSource().get(HouseIndexKey.HOUSE_ID))));
+        }
+
+        return new ServiceMultiResult<>(searchResponse.getHits().getTotalHits(), houseIds);
     }
 
     private boolean updateSuggest(HouseIndexTemplate indexTemplate) {

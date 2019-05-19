@@ -8,6 +8,12 @@
 var regionCountMap = {};
 //定义一个数组表示标签列表
 var labels = [];
+//
+params = {
+    orderBy: 'lastUpdateTime',
+    orderDirection: 'desc'
+};
+
 
 
 //初始化加载百度地图，把百度地图在地图找房页面的allMap div里面显示出来
@@ -55,6 +61,9 @@ function load(city, regions, aggData) {
 
 
     drawRegion(map, regions);
+
+    //加载房源数据
+    loadHouseData();
 
 }
 
@@ -212,3 +221,89 @@ function drawRegion(map, regionList) {
 
     }
 }
+
+/**
+ * 加载房源数据 并且进行渲染
+ */
+function loadHouseData() {
+    var target = '&'; // 拼接参数
+    $.each(params, function (key, value) {
+        target += (key + '=' + value + '&');
+    });
+
+    $('#house-flow').html('');
+    layui.use('flow', function () {
+        var $ = layui.jquery; //不用额外加载jQuery，flow模块本身是有依赖jQuery的，直接用即可。
+        var flow = layui.flow;
+        flow.load({
+            elem: '#house-flow', //指定列表容器
+            scrollElem: '#house-flow',
+            done: function (page, next) { //到达临界点（默认滚动触发），触发下一页
+                //以jQuery的Ajax请求为例，请求下一页数据（注意：page是从2开始返回）
+                var lis = [],
+                    start = (page - 1) * 3;
+
+                var cityName = $('#cityEnName').val();
+                $.get('/rent/house/map/houses?cityEnName=' + cityName + '&start=' + start + '&size=3' + target,
+                    function (res) {
+                        if (res.code !== 200) {
+                            lis.push('<li>数据加载错误</li>');
+                        } else {
+                            layui.each(res.data, function (index, house) {
+                                var direction;
+                                switch (house.direction) {
+                                    case 1:
+                                        direction = '朝东';
+                                        break;
+                                    case 2:
+                                        direction = '朝南';
+                                        break;
+                                    case 3:
+                                        direction = '朝西';
+                                        break;
+                                    case 4:
+                                        direction = '朝北';
+                                        break;
+                                    case 5:
+                                    default:
+                                        direction = '南北';
+                                        break;
+                                };
+
+                                var tags = '';
+                                for (var i = 0; i < house.tags.length; i++) {
+                                    tags += '<span class="item-tag-color_2 item-extra">' + house.tags[i] + '</span>';
+                                }
+                                var li = '<li class="list-item"><a href="/rent/house/show/' + house.id + '" target="_blank"'
+                                    + ' title="' + house.title + '"data-community="1111027382235"> <div class="item-aside">'
+                                    + '<img src="' + house.cover + '?imageView2/1/w/116/h/116"><div class="item-btm">'
+                                    + '<span class="item-img-icon"><i class="i-icon-arrow"></i><i class="i-icon-dot"></i>'
+                                    + '</span>&nbsp;&nbsp;</div></div><div class="item-main"><p class="item-tle">'
+                                    + house.title + '</p><p class="item-des"> <span>' + house.room + '室' + house.parlour + '厅'
+                                    + '</span><span>' + house.area + '平米</span> <span>' + direction + '</span>'
+                                    + '<span class="item-side">' + house.price + '<span>元/月</span></span></p>'
+                                    + '<p class="item-community"><span class="item-replace-com">' + house.district + '</span>'
+                                    + '<span class="item-exact-com">' + house.district + '</span></p><p class="item-tag-wrap">'
+                                    + tags + '</p></div></a></li>';
+
+                                lis.push(li);
+                            });
+                        }
+
+                        //执行下一页渲染，第二参数为：满足“加载更多”的条件，即后面仍有分页
+                        //pages为Ajax返回的总页数，只有当前页小于总页数的情况下，才会继续出现加载更多
+                        next(lis.join(''), res.more);
+                    });
+            }
+        });
+    });
+}
+
+// 排序切换
+$('ol.order-select li').on('click', function () {
+    $('ol.order-select li.on').removeClass('on');
+    $(this).addClass('on');
+    params.orderBy = $(this).attr('data-bind');
+    params.orderDirection = $(this).attr('data-direction');
+    loadHouseData();
+});

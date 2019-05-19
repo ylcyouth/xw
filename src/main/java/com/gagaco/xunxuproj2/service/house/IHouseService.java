@@ -2,6 +2,7 @@ package com.gagaco.xunxuproj2.service.house;
 
 import com.gagaco.xunxuproj2.service.ServiceMultiResult;
 import com.gagaco.xunxuproj2.service.ServiceResult;
+import com.gagaco.xunxuproj2.service.search.MapSearch;
 import com.gagaco.xunxuproj2.web.dto.HouseDto;
 import com.gagaco.xunxuproj2.web.form.DataTableSearch;
 import com.gagaco.xunxuproj2.web.form.HouseForm;
@@ -37,4 +38,6 @@ public interface IHouseService {
     ServiceResult updateStatus(Long houseId, int status);
 
     ServiceMultiResult query(RentSearch rentSearch);
+
+    ServiceMultiResult<HouseDto> wholeMapQuery(MapSearch mapSearch);
 }

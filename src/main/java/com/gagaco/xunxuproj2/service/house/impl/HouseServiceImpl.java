@@ -10,6 +10,7 @@ import com.gagaco.xunxuproj2.service.ServiceResult;
 import com.gagaco.xunxuproj2.service.house.IHouseService;
 import com.gagaco.xunxuproj2.service.house.IQiniuService;
 import com.gagaco.xunxuproj2.service.search.ISearchService;
+import com.gagaco.xunxuproj2.service.search.MapSearch;
 import com.gagaco.xunxuproj2.web.dto.HouseDetailDto;
 import com.gagaco.xunxuproj2.web.dto.HouseDto;
 import com.gagaco.xunxuproj2.web.dto.HousePictureDto;
@@ -516,6 +517,25 @@ public class HouseServiceImpl implements IHouseService {
         }
 
         return this.simpleQuery(rentSearch);
+    }
+
+    @Override
+    public ServiceMultiResult<HouseDto> wholeMapQuery(MapSearch mapSearch) {
+        ServiceMultiResult<Long> smr = searchService.mapQuery(
+                mapSearch.getCityEnName(),
+                mapSearch.getOrderBy(),
+                mapSearch.getOrderDirection(),
+                mapSearch.getStart(),
+                mapSearch.getSize()
+        );
+
+        //如果这个城市下面没有房源
+        if (smr.getTotal() == 0) {
+            return new ServiceMultiResult<>(0, new ArrayList<>());
+        }
+
+        List<HouseDto> houseList = this.wrapperHouseResult(smr.getResult());
+        return new ServiceMultiResult<>(smr.getTotal(), houseList);
     }
 
     private ServiceMultiResult<HouseDto> simpleQuery(RentSearch rentSearch) {

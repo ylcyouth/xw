@@ -8,11 +8,13 @@ import com.gagaco.xunxuproj2.service.ServiceResult;
 import com.gagaco.xunxuproj2.service.house.IHouseService;
 import com.gagaco.xunxuproj2.service.search.HouseBucketDto;
 import com.gagaco.xunxuproj2.service.search.ISearchService;
+import com.gagaco.xunxuproj2.service.search.MapSearch;
 import com.gagaco.xunxuproj2.service.supportaddress.ISupportAddressService;
 import com.gagaco.xunxuproj2.service.user.IUserService;
 import com.gagaco.xunxuproj2.web.dto.*;
 import com.gagaco.xunxuproj2.web.form.RentSearch;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
@@ -21,6 +23,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import javax.servlet.http.HttpSession;
 import java.util.List;
 import java.util.Map;
+import java.util.NavigableMap;
 
 /**
  * @author wangjiajia
@@ -262,26 +265,25 @@ public class HouseController {
         return "rent-map2";
     }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+
+    /**
+     * 地图找房的房源数据
+     */
+    @GetMapping("rent/house/map/houses")
+    @ResponseBody
+    public ApiResponse rentMapHouses(@ModelAttribute  MapSearch mapSearch) {
+
+        if (mapSearch.getCityEnName() == null || mapSearch.getCityEnName().isEmpty()) {
+            return ApiResponse.ofMessage(HttpStatus.BAD_REQUEST.value(), "必须选择城市");
+        }
+
+        ServiceMultiResult<HouseDto> smr =  houseService.wholeMapQuery(mapSearch);
+        ApiResponse response = ApiResponse.ofSuccess(smr.getResult());
+        response.setMore(smr.getTotal() > (mapSearch.getStart() + mapSearch.getSize()));
+        return response;
+    }
+
 
 
 }
