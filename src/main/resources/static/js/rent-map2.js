@@ -4,6 +4,12 @@
  *
  */
 
+//定义一个地区数据的对象
+var regionCountMap = {};
+//定义一个数组表示标签列表
+var labels = [];
+
+
 //初始化加载百度地图，把百度地图在地图找房页面的allMap div里面显示出来
 function load(city, regions, aggData) {
 
@@ -42,6 +48,12 @@ function load(city, regions, aggData) {
     map.addControl(new BMap.ScaleControl({anchor: BMAP_ANCHOR_TOP_LEFT}));//左上角？
     map.enableScrollWheelZoom(true);//打开鼠标滚轮缩放地图的功能
 
+    //把aggData中的数据放到regionCountMap中
+    for (var i = 0; i < aggData.length; i++) {
+        regionCountMap[aggData[i].key] = aggData[i].count;
+    }
+
+
     drawRegion(map, regions);
 
 }
@@ -56,6 +68,11 @@ function drawRegion(map, regionList) {
     for (var i = 0; i < regionList.length; i++) {
         var regionPoint;
         var textLabel;
+        //边界
+        var boundary = new BMap.Boundary();
+        //多边形覆盖物
+        var polygonContext = {};
+
 
         //regionPoint = new BMap.Point(regionList[i].baiduMapLongtitude, regionList[i].baiduMapLatitude);
         //准备一个地图上点的位置
@@ -64,10 +81,16 @@ function drawRegion(map, regionList) {
         //console.log(regionList[i].baiduMapLongitude);
         //console.log(regionList[i].baiduMapLatitude);
 
-        //准备标签的内容
+        //根据region从regionCountMap中获取对应的聚合数据
+        var houseCount = 0;
+        if (regionList[i].en_name in regionCountMap) {
+            houseCount = regionCountMap[regionList[i].en_name];
+        }
+
+        //准备标签的内容, 并把聚合的数据放进去
         var textContent =
             '<p style="margin-top: 20px; pointer-events: none">'+regionList[i].cn_name + '</p>' +
-            '<p style="pointer-events: none">'+ 0 +'套</p>'
+            '<p style="pointer-events: none">'+ houseCount +'套</p>'
 
         //设置标签的内容和放在地图上的位置
         textLabel = new BMap.Label(textContent, {
@@ -94,5 +117,55 @@ function drawRegion(map, regionList) {
 
         //把标签放到地图上
         map.addOverlay(textLabel);
+
+        //把每个标签都放进事先定义好的labels中
+        labels.push(textLabel);
+
+
+
+
+
+        /*记录行政区域的覆盖物*/
+        //点集合
+        polygonContext[textContent] = [];
+        //闭包传参
+        (function (textContent) {
+            //获取行政区域，参数里的city是哪里来的啊
+            boundary.get(city.cn_name + regionList[i].cn_name, function (rs) {
+
+                //console.log(regionList[i].cn_name);//报错Cannot read property 'cn_name' of undefined
+                //行政区域 点集合 的长度
+                var count = rs.boundaries.length;
+                if (count === 0) {
+                    alert("未能获取当前输入的行政区域");
+                    return;
+                }
+
+                //建立多边形覆盖物
+                for (var j = 0; j < count; j++) {
+                    var polygon = new BMap.Polygon(
+                        rs.boundaries[j],
+                        {
+                            strokeWeight: 2,
+                            strokeColor: '#0054a5',
+                            fillOpacity: 0.3,
+                            fillColor: '0054a5'
+                        }
+                    );
+                    //添加覆盖物
+                    map.addOverlay(polygon);
+
+                }
+
+
+            })
+        })(textContent);
+
+
+
+
+
+
+
     }
 }

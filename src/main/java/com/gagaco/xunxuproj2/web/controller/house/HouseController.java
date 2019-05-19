@@ -229,7 +229,7 @@ public class HouseController {
 
         // es 聚合，该小区共有多少套房源
         ServiceResult<Long> aggSr =
-                searchService.aggregateDictrictHouse(city.getEnName(), region.getEnName(), houseDto.getDistrict());
+                searchService.aggregateDistrictHouse(city.getEnName(), region.getEnName(), houseDto.getDistrict());
         model.addAttribute("houseCountInDistrict", aggSr.getResult());
 
 
