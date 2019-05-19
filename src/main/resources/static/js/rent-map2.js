@@ -65,13 +65,15 @@ function load(city, regions, aggData) {
  */
 function drawRegion(map, regionList) {
 
+    //多边形覆盖物
+    var polygonContext = {};
+
     for (var i = 0; i < regionList.length; i++) {
         var regionPoint;
         var textLabel;
         //边界
         var boundary = new BMap.Boundary();
-        //多边形覆盖物
-        var polygonContext = {};
+
 
 
         //regionPoint = new BMap.Point(regionList[i].baiduMapLongtitude, regionList[i].baiduMapLatitude);
@@ -155,11 +157,52 @@ function drawRegion(map, regionList) {
                     //添加覆盖物
                     map.addOverlay(polygon);
 
+                    //把polygon放到事先定义好的polygonContext里面
+                    polygonContext[textContent].push(polygon);
+
+                    //初始化的时候先把区域上的覆盖物隐藏
+                    polygon.hide();
                 }
-
-
             })
         })(textContent);
+
+        //给给每个区域的label添加鼠标事件，当鼠标移动到label上的时候，显示出这个区域的覆盖物
+        textLabel.addEventListener('mouseover', function (event) {
+            var label = event.target;
+            //从label中获取点集合
+            var boundaries = polygonContext[label.getContent()];
+
+            //给label设置一个新的样式，把它的背景色设成xx色
+            label.setStyle({
+                backgroundColor: '#1AA591'
+            });
+
+            for (var k = 0; k < boundaries.length; k++) {
+                boundaries[k].show();
+            }
+        });
+
+        //给每个区域的label添加鼠标事件，当鼠标移出label的时候，隐藏这个区域的覆盖物
+        textLabel.addEventListener("mouseout", function (event) {
+            var label = event.target;
+            var boundaries = polygonContext[label.getContent()];
+
+            //把label的样式设置初始的颜色，蓝色
+            label.setStyle({
+                backgroundColor: '#0054a5'
+            });
+
+            for (var l = 0; l < boundaries.length; l++) {
+                boundaries[l].hide();
+            }
+        });
+
+        textLabel.addEventListener('click', function (event) {
+            var label = event.target;
+            var map = label.getMap();
+            map.zoomIn();
+            map.panTo(event.point);
+        })
 
 
 
