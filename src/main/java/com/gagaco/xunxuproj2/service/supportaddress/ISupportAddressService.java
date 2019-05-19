@@ -3,6 +3,7 @@ package com.gagaco.xunxuproj2.service.supportaddress;
 import com.gagaco.xunxuproj2.entity.SupportAddress;
 import com.gagaco.xunxuproj2.service.ServiceMultiResult;
 import com.gagaco.xunxuproj2.service.ServiceResult;
+import com.gagaco.xunxuproj2.service.search.BaiduMapLocation;
 import com.gagaco.xunxuproj2.web.dto.SubwayDto;
 import com.gagaco.xunxuproj2.web.dto.SubwayStationDto;
 import com.gagaco.xunxuproj2.web.dto.SupportAddressDto;
@@ -53,4 +54,9 @@ public interface ISupportAddressService {
     ServiceResult<SubwayStationDto> findSubwayStation(Long subwayStationId);
 
     ServiceResult<SupportAddressDto> findCity(String cityEnName);
+
+    /**
+     * 获取城市的详细位置的百度地图经纬度
+     */
+    ServiceResult<BaiduMapLocation> getBaiduMapLocation(String city, String address);
 }

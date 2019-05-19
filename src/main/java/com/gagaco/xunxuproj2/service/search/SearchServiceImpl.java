@@ -6,11 +6,14 @@ import com.gagaco.xunxuproj2.base.RentValueBlock;
 import com.gagaco.xunxuproj2.entity.House;
 import com.gagaco.xunxuproj2.entity.HouseDetail;
 import com.gagaco.xunxuproj2.entity.HouseTag;
+import com.gagaco.xunxuproj2.entity.SupportAddress;
 import com.gagaco.xunxuproj2.repository.HouseDetailRepository;
 import com.gagaco.xunxuproj2.repository.HouseRepository;
 import com.gagaco.xunxuproj2.repository.HouseTagRepository;
+import com.gagaco.xunxuproj2.repository.SupportAddressRepository;
 import com.gagaco.xunxuproj2.service.ServiceMultiResult;
 import com.gagaco.xunxuproj2.service.ServiceResult;
+import com.gagaco.xunxuproj2.service.supportaddress.ISupportAddressService;
 import com.gagaco.xunxuproj2.web.form.RentSearch;
 import com.google.common.collect.Lists;
 import com.google.common.primitives.Longs;
@@ -103,6 +106,12 @@ public class SearchServiceImpl implements ISearchService {
     @Autowired
     private KafkaTemplate<String, String> kafkaTemplate;
 
+    @Autowired
+    private SupportAddressRepository supportAddressRepository;
+
+    @Autowired
+    private ISupportAddressService supportAddressService;
+
     //topics不写会报一个错
     @KafkaListener(topics = INDEX_TOPIC)
     private void handleMessage(String content) {
@@ -145,12 +154,36 @@ public class SearchServiceImpl implements ISearchService {
         }
 
         modelMapper.map(detail, template);
+
         List<HouseTag> tags = houseTagRepository.findAllByHouseId(houseId);
         if (tags != null && !tags.isEmpty()) {
             List<String> tagStrings = new ArrayList<>();
             tags.forEach(tag -> tagStrings.add(tag.getName()));
             template.setTags(tagStrings);
         }
+
+        //获取百度地图经纬度, 获取成功后设置到houseTemplate中
+        SupportAddress city = supportAddressRepository
+                .findByEnNameAndLevel(house.getCityEnName(), SupportAddress.Level.CITY.getValue());
+        SupportAddress region = supportAddressRepository
+                .findByEnNameAndLevel(house.getRegionEnName(), SupportAddress.Level.REGION.getValue());
+
+        String address = city.getCnName()
+                + region.getCnName()
+                + house.getStreet()
+                + house.getDistrict()
+                + detail.getDetailAddress();
+
+        ServiceResult<BaiduMapLocation> baiduMapLocation = supportAddressService
+                .getBaiduMapLocation(city.getCnName(), address);
+
+        if (!baiduMapLocation.isSuccess()) {
+            this.index(message.getHouseId(), message.getRetry() + 1);
+            return;
+        }
+
+        template.setLocation(baiduMapLocation.getResult());
+
 
         SearchRequestBuilder builder = client.prepareSearch(INDEX_NAME).setTypes(INDEX_TYPE);
         builder.setQuery(QueryBuilders.termQuery(HouseIndexKey.HOUSE_ID, houseId));
@@ -185,6 +218,7 @@ public class SearchServiceImpl implements ISearchService {
         this.index(houseId, 0);
     }
 
+    //向kafka发送索引房源的消息
     private void index(long houseId, int retry) {
         if (retry > HouseIndexMessage.MAX_RETRY) {
             logger.error("Retry index times over 3 for house: " + houseId + "" +"Please check it");

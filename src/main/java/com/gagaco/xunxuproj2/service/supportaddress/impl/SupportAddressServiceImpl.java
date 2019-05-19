@@ -1,23 +1,36 @@
 package com.gagaco.xunxuproj2.service.supportaddress.impl;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.gagaco.xunxuproj2.entity.Subway;
 import com.gagaco.xunxuproj2.entity.SubwayStation;
 import com.gagaco.xunxuproj2.entity.SupportAddress;
 import com.gagaco.xunxuproj2.repository.SubwayRepository;
 import com.gagaco.xunxuproj2.repository.SubwayStationRepository;
-import com.gagaco.xunxuproj2.repository.SupportAddreeeRepository;
+import com.gagaco.xunxuproj2.repository.SupportAddressRepository;
 import com.gagaco.xunxuproj2.service.ServiceMultiResult;
 import com.gagaco.xunxuproj2.service.ServiceResult;
+import com.gagaco.xunxuproj2.service.search.BaiduMapLocation;
 import com.gagaco.xunxuproj2.service.supportaddress.ISupportAddressService;
 import com.gagaco.xunxuproj2.web.dto.SubwayDto;
 import com.gagaco.xunxuproj2.web.dto.SubwayStationDto;
 import com.gagaco.xunxuproj2.web.dto.SupportAddressDto;
+import org.apache.http.HttpResponse;
+import org.apache.http.HttpStatus;
+import org.apache.http.client.HttpClient;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.impl.client.HttpClients;
+import org.apache.http.util.EntityUtils;
 import org.modelmapper.ModelMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-import javax.annotation.processing.SupportedOptions;
-import javax.swing.text.AbstractDocument;
+import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -34,7 +47,7 @@ import java.util.Map;
 public class SupportAddressServiceImpl implements ISupportAddressService {
 
     @Autowired
-    private SupportAddreeeRepository supportAddressRepository;
+    private SupportAddressRepository supportAddressRepository;
 
     @Autowired
     private ModelMapper modelMapper;
@@ -44,6 +57,17 @@ public class SupportAddressServiceImpl implements ISupportAddressService {
 
     @Autowired
     private SubwayStationRepository subwayStationRepository;
+
+    private Logger logger = LoggerFactory.getLogger(SupportAddressServiceImpl.class);
+
+    @Value("${baidu.map.geoconv.api}")
+    private String BAIDU_MAP_GEOCONV_API;
+
+    @Value("${baidu.map.server.ak}")
+    private String BAIDU_MAP_SERVER_AK;
+
+    @Autowired
+    private ObjectMapper objectMapper;
 
     @Override
     public ServiceMultiResult<SupportAddressDto> findAllCities() {
@@ -155,30 +179,63 @@ public class SupportAddressServiceImpl implements ISupportAddressService {
         return ServiceResult.of(currentCityDto);
     }
 
+    /**
+     * 获取城市的详细位置的百度地图经纬度
+     *
+     * @param city
+     * @param address
+     */
+    @Override
+    public ServiceResult<BaiduMapLocation> getBaiduMapLocation(String city, String address) {
+        String encodeCity = "";
+        String encodeAddress = "";
 
+        //对city和address进行url编码
+        try {
+            encodeCity = URLEncoder.encode(city, "UTF-8");
+            encodeAddress = URLEncoder.encode(address, "UTF-8");
+        } catch (UnsupportedEncodingException e) {
+            logger.error("Error to encode house address", e);
+            return new ServiceResult<BaiduMapLocation>(false, "Error to encode hosue address");
+        }
 
+        //使用HttpClient调用百度地图接口获取经纬度
+        //CloseableHttpClient httpClient = HttpClients.createDefault();
+        HttpClient httpClient = HttpClients.createDefault();
 
+        StringBuilder sb = new StringBuilder(BAIDU_MAP_GEOCONV_API);
+        sb.append("city=").append(encodeCity).append("&");
+        sb.append("address=").append(encodeAddress).append("&");
+        sb.append("ak=").append(BAIDU_MAP_SERVER_AK).append("&");
+        sb.append("output=json");
 
+        HttpGet httpGet = new HttpGet(sb.toString());
 
+        try {
+            HttpResponse response = httpClient.execute(httpGet);
 
+            if (response.getStatusLine().getStatusCode() != HttpStatus.SC_OK) {
+                return new ServiceResult<>(false, "Can not get baidu map location");
+            }
 
+            String result = EntityUtils.toString(response.getEntity(), "UTF-8");
+            JsonNode jsonNode = objectMapper.readTree(result);
 
+            int status = jsonNode.get("status").asInt();
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+            if (status != 0) {
+                return new ServiceResult<>(false, "Error to get map location for status: " + status);
+            } else {
+                BaiduMapLocation location = new BaiduMapLocation();
+                JsonNode jsonLocation = jsonNode.get("result").get("location");
+                location.setLongitude(jsonLocation.get("lng").asDouble());
+                location.setLatitude(jsonLocation.get("lat").asDouble());
+                return ServiceResult.of(location);
+            }
+        } catch (IOException e) {
+            logger.error("Error to fetch baidumap api", e);
+            return new ServiceResult<>(false, "Error to fetch baidumap api");
+        }
+    }
 
 }

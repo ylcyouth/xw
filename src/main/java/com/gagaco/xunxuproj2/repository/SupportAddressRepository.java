@@ -2,6 +2,7 @@ package com.gagaco.xunxuproj2.repository;
 
 import com.gagaco.xunxuproj2.entity.SupportAddress;
 import org.springframework.data.repository.CrudRepository;
+import org.springframework.stereotype.Repository;
 
 import java.util.List;
 
@@ -11,7 +12,8 @@ import java.util.List;
  *
  *
  */
-public interface SupportAddreeeRepository extends CrudRepository<SupportAddress, Long> {
+@Repository
+public interface SupportAddressRepository extends CrudRepository<SupportAddress, Long> {
 
 
     List<SupportAddress> findAllByLevel(String level);
