@@ -37,7 +37,7 @@ public interface ISearchService {
     /**
      * 聚合小区的房源数量
      */
-    ServiceResult<Long> aggregateDictrictHouse(String cityName, String regionEnName, String district);
+    ServiceResult<Long> aggregateDistrictHouse(String cityName, String regionEnName, String district);
 
     /**
      * 聚合城市房源数据

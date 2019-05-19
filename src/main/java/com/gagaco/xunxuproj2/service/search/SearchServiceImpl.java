@@ -569,7 +569,7 @@ public class SearchServiceImpl implements ISearchService {
      * @param district
      */
     @Override
-    public ServiceResult<Long> aggregateDictrictHouse(String cityName, String regionEnName, String district) {
+    public ServiceResult<Long> aggregateDistrictHouse(String cityName, String regionEnName, String district) {
 
         BoolQueryBuilder boolQueryBuilder = QueryBuilders.boolQuery()
                 .filter(QueryBuilders.termQuery(HouseIndexKey.CITY_EN_NAME, cityName))

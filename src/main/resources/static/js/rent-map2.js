@@ -58,20 +58,24 @@ function drawRegion(map, regionList) {
         var textLabel;
 
         //regionPoint = new BMap.Point(regionList[i].baiduMapLongtitude, regionList[i].baiduMapLatitude);
+        //准备一个地图上点的位置
         regionPoint = new BMap.Point(regionList[i].baiduMapLongitude, regionList[i].baiduMapLatitude);
 
-        console.log(regionList[i].baiduMapLongitude);
-        console.log(regionList[i].baiduMapLatitude);
+        //console.log(regionList[i].baiduMapLongitude);
+        //console.log(regionList[i].baiduMapLatitude);
 
+        //准备标签的内容
         var textContent =
             '<p style="margin-top: 20px; pointer-events: none">'+regionList[i].cn_name + '</p>' +
             '<p style="pointer-events: none">'+ 0 +'套</p>'
 
+        //设置标签的内容和放在地图上的位置
         textLabel = new BMap.Label(textContent, {
             position: regionPoint, //标签放在地图上的哪个位置
             offset: new BMap.Size(-40, 20) //文本偏移量
         });
 
+        //设置标签的样式
         textLabel.setStyle({
             height: '78px',
             width: '78px',

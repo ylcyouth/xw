@@ -3,8 +3,8 @@ package com.gagaco.xunxuproj2.web.dto;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
- * @time 2019-4-24 22:50:36
- * @author wangjiajia
+ * @author wjj
+ * @create 2019-4-24 22:50:36
  */
 public class SupportAddressDto {
 
