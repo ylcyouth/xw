@@ -538,6 +538,22 @@ public class HouseServiceImpl implements IHouseService {
         return new ServiceMultiResult<>(smr.getTotal(), houseList);
     }
 
+    /**
+     * 地图精确范围的数据查询
+     *
+     * @param mapSearch
+     */
+    @Override
+    public ServiceMultiResult<HouseDto> boundMapQuery(MapSearch mapSearch) {
+
+        ServiceMultiResult<Long> serviceMultiResult = searchService.mapQuery(mapSearch);
+        if (serviceMultiResult.getTotal() == 0) {
+            return new ServiceMultiResult<>(0, new ArrayList<>());
+        }
+        List<HouseDto> houseDtosList= this.wrapperHouseResult(serviceMultiResult.getResult());
+        return new ServiceMultiResult<>(serviceMultiResult.getTotal(), houseDtosList);
+    }
+
     private ServiceMultiResult<HouseDto> simpleQuery(RentSearch rentSearch) {
         //以下是查出所有 发布的房源
 

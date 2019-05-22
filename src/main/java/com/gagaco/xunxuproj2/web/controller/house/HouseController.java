@@ -23,7 +23,6 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import javax.servlet.http.HttpSession;
 import java.util.List;
 import java.util.Map;
-import java.util.NavigableMap;
 
 /**
  * @author wangjiajia
@@ -277,8 +276,12 @@ public class HouseController {
         if (mapSearch.getCityEnName() == null || mapSearch.getCityEnName().isEmpty()) {
             return ApiResponse.ofMessage(HttpStatus.BAD_REQUEST.value(), "必须选择城市");
         }
-
-        ServiceMultiResult<HouseDto> smr =  houseService.wholeMapQuery(mapSearch);
+        ServiceMultiResult<HouseDto> smr;
+        if (mapSearch.getLevel() < 13) {
+            smr = houseService.wholeMapQuery(mapSearch);
+        } else {
+            smr = houseService.boundMapQuery(mapSearch);
+        }
         ApiResponse response = ApiResponse.ofSuccess(smr.getResult());
         response.setMore(smr.getTotal() > (mapSearch.getStart() + mapSearch.getSize()));
         return response;

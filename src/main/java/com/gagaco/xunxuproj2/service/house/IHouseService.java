@@ -40,4 +40,9 @@ public interface IHouseService {
     ServiceMultiResult query(RentSearch rentSearch);
 
     ServiceMultiResult<HouseDto> wholeMapQuery(MapSearch mapSearch);
+
+    /**
+     * 地图精确范围的数据查询
+     */
+    ServiceMultiResult<HouseDto> boundMapQuery(MapSearch mapSearch);
 }

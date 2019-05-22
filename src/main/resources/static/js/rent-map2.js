@@ -324,6 +324,7 @@ function mapResize(_map) {
     };
 
     if (zoomLevel < 13) {
+        //loadHouseData();
         for (var i = 0; i < labels.length; i++) {
             labels[i].show();
         }

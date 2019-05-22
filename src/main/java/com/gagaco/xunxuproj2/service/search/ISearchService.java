@@ -49,4 +49,11 @@ public interface ISearchService {
      *
      */
     ServiceMultiResult<Long> mapQuery(String cityEnName, String orderBy, String orderDirection, int start, int size);
+
+    /**
+     * 精确范围查询
+     * @param mapSearch
+     * @return
+     */
+    ServiceMultiResult<Long> mapQuery(MapSearch mapSearch);
 }
