@@ -14,8 +14,6 @@ params = {
     orderDirection: 'desc'
 };
 
-
-
 //初始化加载百度地图，把百度地图在地图找房页面的allMap div里面显示出来
 function load(city, regions, aggData) {
 
@@ -64,6 +62,17 @@ function load(city, regions, aggData) {
 
     //加载房源数据
     loadHouseData();
+
+    //给地图绑定缩放事件
+    map.addEventListener("zoomend", function (event) {
+        mapResize(event.target);
+    });
+
+    //给地图绑定拖拽事件
+    map.addEventListener("dragend", function (event) {
+        mapResize(event.target);
+    });
+
 
 }
 
@@ -297,6 +306,33 @@ function loadHouseData() {
             }
         });
     });
+}
+
+function mapResize(_map) {
+    var bounds = _map.getBounds();
+    var southWest = bounds.getSouthWest();
+    var northEast = bounds.getNorthEast();
+
+    var zoomLevel = _map.getZoom();
+
+    params = {
+        level: zoomLevel,
+        leftLongitude: southWest.lng,  //左上角 经度
+        leftLatitude: northEast.lat,   //左上角 纬度
+        rightLongitude: northEast.lng, //右下角 经度
+        rightLatitude: southWest.lat   //右下角 纬度
+    };
+
+    if (zoomLevel < 13) {
+        for (var i = 0; i < labels.length; i++) {
+            labels[i].show();
+        }
+    } else {
+        loadHouseData();
+        for (var i = 0; i < labels.length; i++) {
+            labels[i].hide();
+        }
+    }
 }
 
 // 排序切换
