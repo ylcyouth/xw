@@ -206,13 +206,21 @@ public class SearchServiceImpl implements ISearchService {
             success = deleteAndCreate(totalHit, template);
         }
 
-        /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
+        //上传百度LBS数据
+        ServiceResult lbsUploadResult = supportAddressService.lbsUpload(
+                baiduMapLocation.getResult(),
+                house.getStreet() + house.getDistrict() + house.getDistrict(),
+                city.getCnName() + region.getCnName() + house.getStreet() + house.getDistrict(),
+                message.getHouseId(),
+                house.getPrice(),
+                house.getArea()
+        );
 
-
-        /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-
-        if (success) {
+        //如果以上操作失败，进行retry
+        if (!success || !lbsUploadResult.isSuccess()) {
+            this.index(message.getHouseId(), message.getRetry() + 1);
+        } else {
             logger.debug("Index house success with house: " + houseId);
         }
 
@@ -267,18 +275,25 @@ public class SearchServiceImpl implements ISearchService {
         BulkIndexByScrollResponse bulkIndexByScrollResponse = builder.get();
         long deleted = bulkIndexByScrollResponse.getDeleted();
         logger.debug("Delete total " + deleted);
-        if (deleted <= 0) {
+
+        ServiceResult lbsRemoveResult = supportAddressService.lbsRemove(houseId);
+
+        if (deleted <= 0 || !lbsRemoveResult.isSuccess()) {
+            logger.debug("Remove house from es is not OK, houseId: " + houseId);
+            //重新发删除house的消息给kafka
             this.remove(houseId, message.getRetry() + 1);
+        } else {
+            logger.debug("Remove house from es is OK, houseId: " + houseId);
         }
 
         //5.6的写法
         //BulkByScrollResponse response = builder.get();
         //long deleted = response.getDeleted();
-//        logger.debug("Delete total " + deleted);
-//
-//        if (deleted <= 0) {
-//            this.remove(houseId, message.getRetry() + 1);
-//        }
+        //logger.debug("Delete total " + deleted);
+        //
+        //if (deleted <= 0) {
+        //    this.remove(houseId, message.getRetry() + 1);
+        //}
     }
 
 

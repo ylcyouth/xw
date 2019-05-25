@@ -277,7 +277,7 @@ function loadHouseData() {
                                     default:
                                         direction = '南北';
                                         break;
-                                };
+                                }
 
                                 var tags = '';
                                 for (var i = 0; i < house.tags.length; i++) {
