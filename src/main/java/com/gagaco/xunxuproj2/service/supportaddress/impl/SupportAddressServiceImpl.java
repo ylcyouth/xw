@@ -245,14 +245,14 @@ public class SupportAddressServiceImpl implements ISupportAddressService {
 
 
 
-    public static final String BAIDU_MAP_LBS_COORD_TYPE = "3";
-    public static final String BAIDU_MAP_LBS_GEOTABLE_ID = "202281";
-    public static final String BAIDU_MAP_LBS_CREATE_API = "http://api.map.baidu.com/geodata/v3/poi/create";
-    public static final String BAIDU_MAP_LBS_UPDATE_API = "http://api.map.baidu.com/geodata/v3/poi/update";
-    public static final String BAIDU_MAP_LBS_QUERY_API = "http://api.map.baidu.com/geodata/v3/poi/list?";
+    private static final String BAIDU_MAP_LBS_COORD_TYPE = "3";
+    private static final String BAIDU_MAP_LBS_GEOTABLE_ID = "202281";
+    private static final String BAIDU_MAP_LBS_CREATE_API = "http://api.map.baidu.com/geodata/v3/poi/create";
+    private static final String BAIDU_MAP_LBS_UPDATE_API = "http://api.map.baidu.com/geodata/v3/poi/update";
+    private static final String BAIDU_MAP_LBS_QUERY_API = "http://api.map.baidu.com/geodata/v3/poi/list?";
+    private static final String BAIDU_MAP_LBS_DELETE_API = "http://api.map.baidu.com/geodata/v3/poi/delete";
 
 
-    private static final String LBS_DELETE_API = "http://api.map.baidu.com/geodata/v3/poi/delete";
 
 
     /**
@@ -367,7 +367,7 @@ public class SupportAddressServiceImpl implements ISupportAddressService {
             return true;
 
         } catch (IOException e) {
-            e.printStackTrace();
+            logger.error("Error to query lbs data for message: " + e);
             return false;
         }
     }
@@ -380,19 +380,44 @@ public class SupportAddressServiceImpl implements ISupportAddressService {
     @Override
     public ServiceResult lbsRemove(Long houseId) {
 
+        HttpClient httpClient = HttpClients.createDefault();
 
+        //百度上传LBS数据需要的参数
+        List<NameValuePair> nvpList = new ArrayList<>();
+        nvpList.add(new BasicNameValuePair("ak", BAIDU_MAP_SERVER_AK));
+        //虎鲸数据管理平台中数据表的id
+        nvpList.add(new BasicNameValuePair("geotable_id", BAIDU_MAP_LBS_GEOTABLE_ID));
+        nvpList.add(new BasicNameValuePair("houseId", String.valueOf(houseId)));
 
+        HttpPost deletePost = new HttpPost(BAIDU_MAP_LBS_DELETE_API);
 
+        try {
+            deletePost.setEntity(new UrlEncodedFormEntity(nvpList, "UTF-8"));
 
+            HttpResponse deleteResponse = httpClient.execute(deletePost);
 
+            String result = EntityUtils.toString(deleteResponse.getEntity(), "UTF-8");
 
+            if (deleteResponse.getStatusLine().getStatusCode() != HttpStatus.SC_OK) {
+                logger.error("Error to delete lbs data for response: " + result);
+                return new ServiceResult(false);
+            }
 
+            JsonNode jsonNode = objectMapper.readTree(result);
+            int status = jsonNode.get("status").asInt();
+            if (status != 0) {
+                String message = jsonNode.get("message").asText();
+                logger.error("Error to delete lbs data for message: " + message);
+                return new ServiceResult(false);
+            }
 
+            return ServiceResult.success();
 
+        } catch (IOException e) {
+            logger.error("Error to delete lbs data for message: " + e);
+            return new ServiceResult(false);
 
-
-
-        return null;
+        }
     }
 
 }
