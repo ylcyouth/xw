@@ -59,4 +59,15 @@ public interface ISupportAddressService {
      * 获取城市的详细位置的百度地图经纬度
      */
     ServiceResult<BaiduMapLocation> getBaiduMapLocation(String city, String address);
+
+    /**
+     * 上传百度LBS数据
+     */
+    ServiceResult lbsUpload(BaiduMapLocation location, String title, String address, Long houseId, int price, int area);
+
+    /**
+     * 删除百度LBS数据
+     */
+    ServiceResult lbsRemove(Long houseId);
+
 }
